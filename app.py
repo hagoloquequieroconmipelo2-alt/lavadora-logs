@@ -10,7 +10,7 @@ import pytesseract
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import Color
 
-st.set_page_config(page_title="Portal IT - Ajuntament", page_icon="🏢", layout="wide")
+st.set_page_config(page_title="Portal IT", page_icon="🏢", layout="wide")
 
 st.title("🏢 Portal d'Eines IT (Zero-Footprint)")
 st.write("Eines locals de procés de dades. **Cap document es guarda al servidor un cop tancada la sessió.**")
@@ -234,7 +234,7 @@ with pestanya4:
     ])
 
     if opcio_avancada == "🔍 Lector de Text en Imatges (OCR)":
-        st.info("Aquesta eina llegeix el text de fotografies sense enviar les dades fora de l'Ajuntament.")
+        st.info("Aquesta eina llegeix el text de fotografies sense enviar les dades fora.")
         imatge_ocr = st.file_uploader("Puja la imatge amb el text a llegir", type=["jpg", "jpeg", "png"], key="ocr_uploader")
         
         if imatge_ocr:
