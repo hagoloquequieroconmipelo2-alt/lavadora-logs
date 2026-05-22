@@ -1,4 +1,4 @@
-# Lavadora de Logs PRO (Zero-Footprint)
+# Rentadora de Logs PRO (Zero-Footprint)
 
 Portal d'eines administratives d'alt rendiment per a la gestió documental. Dissenyat per a la seguretat de les dades i l'eficiència en entorns municipals.
 
