@@ -10,7 +10,7 @@ import pytesseract
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import Color
 
-st.set_page_config(page_title="Portal d'eines IT", page_icon="🏢", layout="wide")
+st.set_page_config(page_title="Portal IT - Ajuntament", page_icon="🏢", layout="wide")
 
 st.title("🏢 Portal d'Eines IT (Zero-Footprint)")
 st.write("Eines locals de procés de dades. **Cap document es guarda al servidor un cop tancada la sessió.**")
@@ -47,7 +47,7 @@ with pestanya1:
     
     def netejar_text_pro(text):
         if not text: return ""
-        memoria = {'IP': {}, 'MAC': {}, 'URL': {}, 'CREDENCIAL': {}, 'DNI': {}, 'IBAN': {}, 'PERSONA': {}}
+        memoria = {'IP': {}, 'MAC': {}, 'URL': {}, 'CREDENCIAL': {}, 'DNI': {}, 'IBAN': {}, 'EMAIL': {}, 'TELEFON': {}, 'PERSONA': {}}
         
         def obtenir_tag(valor, categoria, prefix):
             valor_net = valor.strip().strip('"\'')
@@ -55,31 +55,14 @@ with pestanya1:
                 memoria[categoria][valor_net] = f"<{prefix}_{len(memoria[categoria])+1}>"
             return memoria[categoria][valor_net]
 
-        if analyzer:
-            try:
-                results = analyzer.analyze(text=text, language="ca", entities=["PERSON"])
-                results = sorted(results, key=lambda x: x.start, reverse=True)
-                paraules_prohibides = [
-                    "DNI", "NIE", "NIF", "BOPB", "DOGC", "OAC", "SEPE", 
-                    "DECRET", "PRESIDENT", "PRESIDÈNCIA", "ALCALDE", "ALCALDESSA",
-                    "CONSELL", "COMARCAL", "OCCIDENTAL", "AJUNTAMENT", "RESOLUCIÓ", 
-                    "TRIBUNAL", "GENERALITAT", "CONSORCI", "SUBGRUP", "TREBALLADORS"
-                ]
-                for res in results:
-                    if res.score > 0.45:
-                        nom_original = text[res.start:res.end]
-                        nom_net = nom_original.strip()
-                        if len(nom_net) > 2 and nom_net[0].isupper() and nom_net.upper() not in paraules_prohibides:
-                            if not nom_net.isupper():
-                                tag = obtenir_tag(nom_original, 'PERSONA', 'PERSONA')
-                                text = text[:res.start] + tag + text[res.end:]
-            except Exception: pass 
-
+        # 1. FASE EXPRESIONS REGULARS (Dades estructurades)
         def rep_ip(m): return obtenir_tag(m.group(0), 'IP', 'IP')
         def rep_mac(m): return obtenir_tag(m.group(0), 'MAC', 'MAC')
         def rep_url(m): return obtenir_tag(m.group(0), 'URL', 'URL')
         def rep_dni(m): return obtenir_tag(m.group(0).upper(), 'DNI', 'DNI')
         def rep_iban(m): return obtenir_tag(m.group(0).upper().replace(" ", ""), 'IBAN', 'IBAN')
+        def rep_email(m): return obtenir_tag(m.group(0), 'EMAIL', 'EMAIL')
+        def rep_telefon(m): return obtenir_tag(m.group(0), 'TELEFON', 'TELF')
         def rep_cred(m):
             secret = m.group(len(m.groups()))
             tag = obtenir_tag(secret, 'CREDENCIAL', 'CRED')
@@ -89,10 +72,37 @@ with pestanya1:
         text = re.sub(r'\b(?:[0-9A-Fa-f]{2}[:-]){5}(?:[0-9A-Fa-f]{2})\b', rep_mac, text)
         text = re.sub(r'https?://[a-zA-Z0-9.-]+(?::\d+)?(?:/[a-zA-Z0-9./?%&=-]*)?', rep_url, text)
         text = re.sub(r'\b[XYZxyz]?\d{5,8}[A-Za-z]\b', rep_dni, text)
-        text = re.sub(r'\b[a-zA-Z]{2}\d{2}(?:[\s-]?\d{4}){4,5}\b', rep_iban, text)
+        text = re.sub(r'\b[A-Za-z]{2}\d{2}[ \-]?[A-Za-z0-9]{4}[ \-]?[A-Za-z0-9]{4}[ \-]?[A-Za-z0-9]{4}[ \-]?[A-Za-z0-9]{4}[ \-]?[A-Za-z0-9]{0,4}\b', rep_iban, text)
+        text = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', rep_email, text)
+        text = re.sub(r'\b(?:\+34|0034)?[ \-]?[6789]\d{2}[ \-]?\d{3}[ \-]?\d{3}\b', rep_telefon, text)
         text = re.sub(r'(?i)(password|passwd|secret|token|api_key|key|auth)\s*[:=]\s*(["\']?[^\s"\'\n]+["\']?)', rep_cred, text)
         text = re.sub(r'(?i)(?:\s|^)(-p|--password)(\s*=?\s*)(["\']?[^\s"\'\n]+["\']?)', rep_cred, text)
-        
+
+        # 2. FASE INTEL·LIGÈNCIA ARTIFICIAL (Text lliure)
+        if analyzer:
+            try:
+                results = analyzer.analyze(text=text, language="ca", entities=["PERSON"])
+                results = sorted(results, key=lambda x: x.start, reverse=True)
+                
+                # Passem a un "set" en minúscules per a màxima velocitat
+                paraules_prohibides = {
+                    "dni", "nie", "nif", "bopb", "dogc", "oac", "sepe", 
+                    "decret", "president", "presidència", "alcalde", "alcaldessa",
+                    "consell", "comarcal", "occidental", "ajuntament", "resolució", 
+                    "tribunal", "generalitat", "consorci", "subgrup", "treballadors"
+                }
+                
+                for res in results:
+                    if res.score > 0.40:
+                        nom_original = text[res.start:res.end]
+                        nom_net = nom_original.strip()
+                        
+                        # Sense restricció de majúscules, només mirem que no sigui paraula clau
+                        if len(nom_net) > 2 and nom_net.lower() not in paraules_prohibides:
+                            tag = obtenir_tag(nom_original, 'PERSONA', 'PERSONA')
+                            text = text[:res.start] + tag + text[res.end:]
+            except Exception: pass 
+            
         return text
 
     with st.form("formulari_rentadora"):
@@ -224,7 +234,7 @@ with pestanya4:
     ])
 
     if opcio_avancada == "🔍 Lector de Text en Imatges (OCR)":
-        st.info("Aquesta eina llegeix el text de fotografies sense enviar les dades fora.")
+        st.info("Aquesta eina llegeix el text de fotografies sense enviar les dades fora de l'Ajuntament.")
         imatge_ocr = st.file_uploader("Puja la imatge amb el text a llegir", type=["jpg", "jpeg", "png"], key="ocr_uploader")
         
         if imatge_ocr:
@@ -254,17 +264,14 @@ with pestanya4:
                     escritor = PdfWriter()
                     
                     for pagina in lector.pages:
-                        # Extraiem les dimensions de la pàgina original
                         ample = float(pagina.mediabox.width)
                         alt = float(pagina.mediabox.height)
                         
-                        # Generem una "fulla invisible" en RAM amb el text rotat i transparent
                         packet = io.BytesIO()
                         can = canvas.Canvas(packet, pagesize=(ample, alt))
-                        can.translate(ample / 2, alt / 2) # Anem al centre de la pàgina
-                        can.rotate(45) # Rotació diagonal
+                        can.translate(ample / 2, alt / 2) 
+                        can.rotate(45) 
                         
-                        # Mida de font dinàmica basada en l'amplada i color vermell amb 30% d'opacitat
                         mida_font = int(ample / 10)
                         can.setFont("Helvetica-Bold", mida_font)
                         can.setFillColor(Color(1, 0, 0, alpha=0.3)) 
@@ -272,12 +279,10 @@ with pestanya4:
                         can.drawCentredString(0, 0, text_marca)
                         can.save()
                         
-                        # Llegim la "fulla invisible" generada
                         packet.seek(0)
                         pdf_marca = PdfReader(packet)
                         pagina_marca = pdf_marca.pages[0]
                         
-                        # Fusionem la marca per sobre de la pàgina original
                         pagina.merge_page(pagina_marca)
                         escritor.add_page(pagina)
                         
