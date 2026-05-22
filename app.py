@@ -224,7 +224,7 @@ with pestanya4:
     ])
 
     if opcio_avancada == "🔍 Lector de Text en Imatges (OCR)":
-        st.info("Aquesta eina llegeix el text de fotografies sense enviar les dades fora de l'Ajuntament.")
+        st.info("Aquesta eina llegeix el text de fotografies sense enviar les dades fora.")
         imatge_ocr = st.file_uploader("Puja la imatge amb el text a llegir", type=["jpg", "jpeg", "png"], key="ocr_uploader")
         
         if imatge_ocr:
