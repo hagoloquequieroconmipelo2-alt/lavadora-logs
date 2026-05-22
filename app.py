@@ -10,7 +10,7 @@ import pytesseract
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import Color
 
-st.set_page_config(page_title="Portal IT - Ajuntament", page_icon="🏢", layout="wide")
+st.set_page_config(page_title="Portal d'eines IT", page_icon="🏢", layout="wide")
 
 st.title("🏢 Portal d'Eines IT (Zero-Footprint)")
 st.write("Eines locals de procés de dades. **Cap document es guarda al servidor un cop tancada la sessió.**")
